@@ -1,0 +1,129 @@
+import pygame
+import random
+import time
+
+# Initialize Pygame
+pygame.init()
+
+# Define constants
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 600
+CARD_SIZE = 100
+MARGIN = 20
+TIMER_LIMIT = 60  # 60 seconds for the game
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREY = (169, 169, 169)
+
+# Fonts
+FONT = pygame.font.SysFont('Arial', 30)
+
+# Card values (can be images or numbers)
+card_values = ["A", "B", "C", "D", "E", "F", "G", "H"]
+card_values = card_values * 2  # Duplicate to create pairs
+random.shuffle(card_values)
+
+# Set up the screen
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Memory Puzzle Game")
+
+# Define the card class
+class Card:
+    def __init__(self, value, x, y):
+        self.value = value
+        self.x = x
+        self.y = y
+        self.width = CARD_SIZE
+        self.height = CARD_SIZE
+        self.flipped = False
+
+    def draw(self):
+        if self.flipped:
+            pygame.draw.rect(screen, WHITE, (self.x, self.y, self.width, self.height))
+            text = FONT.render(self.value, True, BLACK)
+            screen.blit(text, (self.x + self.width // 4, self.y + self.height // 4))
+        else:
+            pygame.draw.rect(screen, GREY, (self.x, self.y, self.width, self.height))
+
+    def is_over(self, mouse_pos):
+        return self.x < mouse_pos[0] < self.x + self.width and self.y < mouse_pos[1] < self.y + self.height
+
+# Function to draw the timer
+def draw_timer(time_left):
+    timer_text = FONT.render(f"Time: {time_left}s", True, BLACK)
+    screen.blit(timer_text, (SCREEN_WIDTH - 150, 20))
+
+# Main game loop
+def main():
+    clock = pygame.time.Clock()
+    start_time = time.time()
+    flipped_cards = []
+    matched_pairs = 0
+
+    # Create cards
+    cards = []
+    for row in range(4):
+        for col in range(4):
+            card = Card(card_values.pop(), col * (CARD_SIZE + MARGIN) + MARGIN, row * (CARD_SIZE + MARGIN) + MARGIN)
+            cards.append(card)
+
+    running = True
+    while running:
+        screen.fill(WHITE)
+
+        # Draw all cards
+        for card in cards:
+            card.draw()
+
+        # Calculate remaining time
+        time_left = TIMER_LIMIT - int(time.time() - start_time)
+        if time_left <= 0:
+            running = False  # End the game when the time is up
+        else:
+            draw_timer(time_left)
+
+        # Event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+
+                for card in cards:
+                    if card.is_over(mouse_pos) and not card.flipped and len(flipped_cards) < 2:
+                        card.flipped = True
+                        flipped_cards.append(card)
+
+                # Check if two cards are flipped
+                if len(flipped_cards) == 2:
+                    if flipped_cards[0].value == flipped_cards[1].value:
+                        matched_pairs += 1
+                    else:
+                        pygame.time.delay(500)  # Pause for a brief moment
+                        flipped_cards[0].flipped = False
+                        flipped_cards[1].flipped = False
+                    flipped_cards = []
+
+        # Check for game over (all pairs matched)
+        if matched_pairs == len(cards) // 2:
+            running = False
+
+        pygame.display.update()
+        clock.tick(30)
+
+    # Display result
+    screen.fill(WHITE)
+    if matched_pairs == len(cards) // 2:
+        result_text = FONT.render("You Win!", True, BLACK)
+    else:
+        result_text = FONT.render("Time's Up! You Lose.", True, BLACK)
+    screen.blit(result_text, (SCREEN_WIDTH // 3, SCREEN_HEIGHT // 2))
+    pygame.display.update()
+    pygame.time.delay(2000)  # Show result for a few seconds
+    pygame.quit()
+
+# Start the game
+if __name__ == "__main__":
+    main()
